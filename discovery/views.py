@@ -167,7 +167,7 @@ def api_discover_movies(request):
     for m in page_obj.object_list:
         genres_list = [mg.genre.name for mg in m.movie_genres.all()]
         languages_list = [ml.language.name for ml in m.movie_languages.all()]
-        image_url = m.image.url if m.image else '/static/images/default_movie.jpg'
+        image_url = m.poster_url if hasattr(m, 'poster_url') else (m.image.url if m.image else '/static/movies/avengers_endgame_real.jpg')
 
         movies_data.append({
             'id': m.id,

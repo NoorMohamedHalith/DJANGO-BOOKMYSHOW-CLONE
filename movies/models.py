@@ -12,6 +12,15 @@ class Movie(models.Model):
     def __str__(self):
         return self.name
 
+    @property
+    def poster_url(self):
+        if self.image:
+            img_str = str(self.image)
+            if img_str.startswith('http://') or img_str.startswith('https://'):
+                return img_str
+            return f"/static/{img_str}"
+        return "/static/movies/avengers_endgame_real.jpg"
+
 class Theater(models.Model):
     name = models.CharField(max_length=255)
     movie = models.ForeignKey(Movie,on_delete=models.CASCADE,related_name='theaters')

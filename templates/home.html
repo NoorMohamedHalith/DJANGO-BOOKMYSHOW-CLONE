@@ -130,10 +130,12 @@
         <a href="{% url 'theater_list' movie.id %}" class="text-decoration-none">
           <div class="card h-100">
             <img
-              src="{{ movie.image.url }}"
+              src="{{ movie.poster_url }}"
               class="card-img-top"
               alt="{{ movie.name }}"
               height="300"
+              style="object-fit: cover;"
+              onerror="this.onerror=null; this.src='/static/movies/avengers_endgame_real.jpg';"
             />
             <div class="card-body d-flex flex-column justify-content-between">
               <h5 class="card-title text-center">{{ movie.name }}</h5>
