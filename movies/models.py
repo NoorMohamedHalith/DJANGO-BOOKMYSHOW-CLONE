@@ -18,8 +18,13 @@ class Movie(models.Model):
             img_str = str(self.image)
             if img_str.startswith('http://') or img_str.startswith('https://'):
                 return img_str
-            return f"/static/{img_str}"
-        return "/static/movies/avengers_endgame_real.jpg"
+            if img_str.startswith('/'):
+                return img_str
+            try:
+                return self.image.url
+            except Exception:
+                return f"/media/{img_str}"
+        return "/media/movies/avengers_endgame_real.jpg"
 
 class Theater(models.Model):
     name = models.CharField(max_length=255)
