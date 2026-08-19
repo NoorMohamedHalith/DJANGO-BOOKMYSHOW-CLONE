@@ -90,29 +90,52 @@ WSGI_APPLICATION = 'bookmyseat.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
+IS_SERVERLESS_OR_READONLY = (
+    bool(os.environ.get('VERCEL')) or
+    bool(os.environ.get('VERCEL_ENV')) or
+    bool(os.environ.get('LAMBDA_TASK_ROOT')) or
+    os.path.exists('/var/task') or
+    not os.access(str(BASE_DIR), os.W_OK)
+)
 
 if os.environ.get('DATABASE_URL'):
     import dj_database_url
-    DATABASES['default'] = dj_database_url.parse(os.environ.get('DATABASE_URL'))
-elif os.environ.get('VERCEL') or os.environ.get('VERCEL_ENV'):
+    DATABASES = {
+        'default': dj_database_url.parse(os.environ.get('DATABASE_URL'))
+    }
+elif IS_SERVERLESS_OR_READONLY:
     import shutil
     db_path = BASE_DIR / 'db.sqlite3'
     tmp_db_path = '/tmp/db.sqlite3'
-    if not os.path.exists(tmp_db_path):
-        if os.path.exists(db_path):
-            shutil.copyfile(db_path, tmp_db_path)
-        else:
-            open(tmp_db_path, 'a').close()
-    DATABASES['default'] = {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': tmp_db_path,
+
+    if os.path.exists(db_path) and not os.path.exists(tmp_db_path):
+        try:
+            shutil.copyfile(str(db_path), tmp_db_path)
+        except Exception:
+            pass
+    elif not os.path.exists(tmp_db_path):
+        try:
+            with open(tmp_db_path, 'wb') as f:
+                pass
+        except Exception:
+            pass
+
+    target_db = tmp_db_path if os.path.exists(tmp_db_path) else str(db_path)
+
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': target_db,
+        }
     }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+
 
 # 
 
