@@ -13,11 +13,11 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Guarantee SQLite database copy to /tmp for Vercel Serverless environment
+# Always sync fresh SQLite database copy to /tmp for Vercel Serverless environment
 if os.path.exists('/var/task') or os.environ.get('VERCEL') or os.environ.get('LAMBDA_TASK_ROOT'):
     db_path = BASE_DIR / 'db.sqlite3'
     tmp_db_path = '/tmp/db.sqlite3'
-    if os.path.exists(db_path) and not os.path.exists(tmp_db_path):
+    if os.path.exists(db_path):
         try:
             shutil.copyfile(str(db_path), tmp_db_path)
         except Exception:

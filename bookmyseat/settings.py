@@ -108,15 +108,9 @@ elif IS_SERVERLESS_OR_READONLY:
     db_path = BASE_DIR / 'db.sqlite3'
     tmp_db_path = '/tmp/db.sqlite3'
 
-    if os.path.exists(db_path) and not os.path.exists(tmp_db_path):
+    if os.path.exists(db_path):
         try:
             shutil.copyfile(str(db_path), tmp_db_path)
-        except Exception:
-            pass
-    elif not os.path.exists(tmp_db_path):
-        try:
-            with open(tmp_db_path, 'wb') as f:
-                pass
         except Exception:
             pass
 
