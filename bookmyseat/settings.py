@@ -96,8 +96,24 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+
 if os.environ.get('DATABASE_URL'):
+    import dj_database_url
     DATABASES['default'] = dj_database_url.parse(os.environ.get('DATABASE_URL'))
+elif os.environ.get('VERCEL') or os.environ.get('VERCEL_ENV'):
+    import shutil
+    db_path = BASE_DIR / 'db.sqlite3'
+    tmp_db_path = '/tmp/db.sqlite3'
+    if not os.path.exists(tmp_db_path):
+        if os.path.exists(db_path):
+            shutil.copyfile(db_path, tmp_db_path)
+        else:
+            open(tmp_db_path, 'a').close()
+    DATABASES['default'] = {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': tmp_db_path,
+    }
+
 # 
 
 # Password validation
