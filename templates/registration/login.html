@@ -1,0 +1,108 @@
+{% extends "users/basic.html" %}
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+
+      <!-- Messages -->
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="close" data-dismiss="alert">&times;</button>
+          </div>
+        {% endfor %}
+      {% endif %}
+
+      <!-- Tabbed Login Card -->
+      <div class="card shadow-lg border-0" style="border-radius: 16px; overflow: hidden;">
+        <div class="card-header bg-white border-0 p-0">
+          <ul class="nav nav-tabs nav-justified border-0" id="loginTabs">
+            <li class="nav-item">
+              <a class="nav-link font-weight-bold py-3 text-primary {% if active_tab != 'admin' %}active border-bottom-0 bg-white{% else %}text-muted bg-light{% endif %}" id="user-tab" data-toggle="tab" href="#user-login-tab" role="tab">
+                <i class="fas fa-user mr-2"></i> User Login
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link font-weight-bold py-3 text-danger {% if active_tab == 'admin' %}active border-bottom-0 bg-white{% else %}text-muted bg-light{% endif %}" id="admin-tab" data-toggle="tab" href="#admin-login-tab" role="tab">
+                <i class="fas fa-user-shield mr-2"></i> Admin Login
+              </a>
+            </li>
+          </ul>
+        </div>
+
+        <div class="card-body p-4">
+          <div class="tab-content" id="loginTabContent">
+            
+            <!-- User Login Form Tab -->
+            <div class="tab-pane fade {% if active_tab != 'admin' %}show active{% endif %}" id="user-login-tab" role="tabpanel">
+              <div class="text-center mb-4">
+                <h4 class="font-weight-bold text-dark mb-1">Welcome Back!</h4>
+                <p class="text-muted small">Sign in to book tickets, write reviews, and explore movies.</p>
+              </div>
+
+              <form method="POST" action="{% url 'login' %}">
+                {% csrf_token %}
+                <input type="hidden" name="is_admin_login" value="false">
+
+                <div class="form-group mb-3">
+                  <label class="font-weight-bold text-dark small"><i class="fas fa-user text-primary mr-1"></i> Username</label>
+                  <input type="text" name="username" class="form-control form-control-lg" placeholder="Enter username" required autofocus>
+                </div>
+
+                <div class="form-group mb-4">
+                  <label class="font-weight-bold text-dark small"><i class="fas fa-lock text-primary mr-1"></i> Password</label>
+                  <input type="password" name="password" class="form-control form-control-lg" placeholder="Enter password" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-lg btn-block font-weight-bold shadow-sm">
+                  <i class="fas fa-sign-in-alt mr-2"></i> User Login
+                </button>
+              </form>
+
+              <div class="text-center mt-4">
+                <p class="text-muted small mb-0">Don't have an account? <a href="{% url 'signup' %}" class="font-weight-bold text-primary">Sign up here</a></p>
+              </div>
+            </div>
+
+            <!-- Admin Login Form Tab -->
+            <div class="tab-pane fade {% if active_tab == 'admin' %}show active{% endif %}" id="admin-login-tab" role="tabpanel">
+              <div class="text-center mb-4">
+                <h4 class="font-weight-bold text-danger mb-1"><i class="fas fa-shield-alt mr-1"></i> Administrator Portal</h4>
+                <p class="text-muted small">Sign in with staff credentials to access Analytics Dashboard & Django Admin.</p>
+              </div>
+
+              <form method="POST" action="{% url 'login' %}">
+                {% csrf_token %}
+                <input type="hidden" name="is_admin_login" value="true">
+
+                <div class="form-group mb-3">
+                  <label class="font-weight-bold text-dark small"><i class="fas fa-user-shield text-danger mr-1"></i> Admin Username</label>
+                  <input type="text" name="username" class="form-control form-control-lg border-danger" placeholder="Admin username (e.g. admin)" required>
+                </div>
+
+                <div class="form-group mb-4">
+                  <label class="font-weight-bold text-dark small"><i class="fas fa-key text-danger mr-1"></i> Admin Password</label>
+                  <input type="password" name="password" class="form-control form-control-lg border-danger" placeholder="Admin password" required>
+                </div>
+
+                <button type="submit" class="btn btn-danger btn-lg btn-block font-weight-bold shadow-sm mb-3">
+                  <i class="fas fa-user-check mr-2"></i> Admin Login
+                </button>
+              </form>
+
+              <!-- Credentials Box -->
+              <div class="bg-light p-3 rounded text-center border">
+                <small class="text-muted d-block font-weight-bold mb-1"><i class="fas fa-key text-warning mr-1"></i> Pre-configured Admin Credentials:</small>
+                <code class="font-weight-bold text-dark">Username: admin &nbsp;|&nbsp; Password: admin123</code>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,349 @@
+{% extends "users/basic.html" %}
+{% block content %}
+<div class="container-fluid py-4 px-lg-5" style="background-color: #f8f9fa; min-height: 100vh;">
+
+  <!-- Hero Header & Search Bar -->
+  <div class="card shadow-sm border-0 mb-4 bg-primary text-white" style="border-radius: 16px;">
+    <div class="card-body p-4 p-md-5">
+      <div class="row align-items-center">
+        <div class="col-lg-7 mb-3 mb-lg-0">
+          <h1 class="font-weight-bold display-5 mb-2"><i class="fas fa-search-location mr-2"></i>Explore & Discover Movies</h1>
+          <p class="lead mb-0 text-white-50">Filter by genre, language, theater, rating, or search your favorite blockbuster.</p>
+        </div>
+        <div class="col-lg-5">
+          <div class="input-group input-group-lg shadow-sm">
+            <input type="text" id="searchInput" class="form-control border-0" placeholder="Search by movie title, cast, or plot..." value="{{ query }}">
+            <div class="input-group-append">
+              <button class="btn btn-warning text-dark font-weight-bold px-4" type="button" id="searchBtn">
+                <i class="fas fa-search mr-1"></i> Search
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recommended For You Section -->
+  {% if recommended_movies %}
+    <div class="mb-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="font-weight-bold text-dark mb-0">
+          <i class="fas fa-magic text-warning mr-2"></i>Recommended For You
+        </h4>
+        <small class="text-muted">Based on your booking history & trends</small>
+      </div>
+
+      <div class="row flex-row flex-nowrap overflow-auto py-2" style="gap: 15px; scrollbar-width: thin;">
+        {% for movie in recommended_movies %}
+          <div class="col-10 col-sm-6 col-md-4 col-lg-3 flex-shrink-0">
+            <div class="card h-100 border-0 shadow-sm hover-top" style="border-radius: 12px; overflow: hidden;">
+              <img src="{% if movie.image %}{{ movie.image.url }}{% else %}/static/images/default_movie.jpg{% endif %}" class="card-img-top" alt="{{ movie.name }}" style="height: 220px; object-fit: cover;">
+              <div class="card-body p-3">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                  <h6 class="font-weight-bold text-dark mb-0 text-truncate" style="max-width: 70%;">{{ movie.name }}</h6>
+                  <span class="badge badge-warning text-dark font-weight-bold"><i class="fas fa-star mr-1"></i>{{ movie.rating }}</span>
+                </div>
+                <p class="text-muted small mb-3 text-truncate"><i class="fas fa-user-friends mr-1"></i> {{ movie.cast|default:"Cast N/A" }}</p>
+                <a href="{% url 'record_view_and_redirect' movie.id %}" class="btn btn-outline-primary btn-sm btn-block font-weight-bold">Book Tickets</a>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Recently Viewed Section -->
+  {% if recently_viewed %}
+    <div class="mb-4">
+      <h5 class="font-weight-bold text-dark mb-3"><i class="fas fa-history text-info mr-2"></i>Recently Viewed Movies</h5>
+      <div class="d-flex flex-wrap gap-2">
+        {% for rv in recently_viewed %}
+          <a href="{% url 'record_view_and_redirect' rv.movie.id %}" class="btn btn-light border btn-sm rounded-pill px-3 shadow-sm mr-2 mb-2">
+            <i class="fas fa-film text-primary mr-1"></i> {{ rv.movie.name }}
+          </a>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Main Content Layout: Sidebar Filters + Movies Grid -->
+  <div class="row">
+    <!-- Filters Sidebar -->
+    <div class="col-lg-3 mb-4">
+      <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+        <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+          <h5 class="font-weight-bold mb-0 text-dark"><i class="fas fa-filter text-primary mr-2"></i>Filter Movies</h5>
+          <button id="resetFiltersBtn" class="btn btn-link text-muted p-0 small">Reset All</button>
+        </div>
+
+        <div class="card-body p-4">
+          <!-- Genre Filter -->
+          <div class="form-group mb-4">
+            <label class="font-weight-bold text-dark small"><i class="fas fa-masks-theater text-info mr-1"></i> Genre</label>
+            <select id="genreFilter" class="form-control">
+              <option value="">All Genres</option>
+              {% for g in genres %}
+                <option value="{{ g.id }}" {% if selected_genre == g.id %}selected{% endif %}>{{ g.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Language Filter -->
+          <div class="form-group mb-4">
+            <label class="font-weight-bold text-dark small"><i class="fas fa-language text-success mr-1"></i> Language</label>
+            <select id="languageFilter" class="form-control">
+              <option value="">All Languages</option>
+              {% for l in languages %}
+                <option value="{{ l.id }}" {% if selected_language == l.id %}selected{% endif %}>{{ l.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Theater / Screening Filter -->
+          <div class="form-group mb-4">
+            <label class="font-weight-bold text-dark small"><i class="fas fa-building text-warning mr-1"></i> Theater / Screening</label>
+            <select id="theaterFilter" class="form-control">
+              <option value="">All Theaters</option>
+              {% for t in theaters %}
+                <option value="{{ t.id }}" {% if selected_theater == t.id %}selected{% endif %}>{{ t.name }} ({{ t.movie.name }})</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Min Rating Filter -->
+          <div class="form-group mb-2">
+            <label class="font-weight-bold text-dark small d-flex justify-content-between">
+              <span><i class="fas fa-star text-warning mr-1"></i> Minimum Rating</span>
+              <span id="ratingVal" class="badge badge-primary">0+</span>
+            </label>
+            <input type="range" id="minRatingFilter" class="custom-range" min="0" max="5" step="0.5" value="{{ selected_min_rating|default:0 }}">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Movie Grid & Results Section -->
+    <div class="col-lg-9">
+      <!-- Sorting & Results Count Bar -->
+      <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
+        <div class="card-body py-3 d-flex flex-column flex-sm-row justify-content-between align-items-sm-center">
+          <span class="text-muted font-weight-bold mb-2 mb-sm-0" id="totalCountText">
+            Showing {{ total_count }} movies
+          </span>
+
+          <div class="d-flex align-items-center">
+            <label class="text-muted small font-weight-bold mr-2 mb-0" style="white-space: nowrap;">Sort By:</label>
+            <select id="sortFilter" class="form-control form-control-sm font-weight-bold" style="width: auto;">
+              <option value="popularity" {% if selected_sort == 'popularity' %}selected{% endif %}>Most Popular (Bookings)</option>
+              <option value="rating" {% if selected_sort == 'rating' %}selected{% endif %}>Highest Rating</option>
+              <option value="newest" {% if selected_sort == 'newest' %}selected{% endif %}>Newest Releases</option>
+              <option value="title" {% if selected_sort == 'title' %}selected{% endif %}>Title A-Z</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Movie Grid Container -->
+      <div id="movieGrid" class="row">
+        {% for movie in movies %}
+          <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 border-0 shadow-sm hover-top" style="border-radius: 12px; overflow: hidden;">
+              <img src="{% if movie.image %}{{ movie.image.url }}{% else %}/static/images/default_movie.jpg{% endif %}" class="card-img-top" alt="{{ movie.name }}" style="height: 250px; object-fit: cover;">
+              <div class="card-body p-4 d-flex flex-column justify-content-between">
+                <div>
+                  <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h5 class="font-weight-bold text-dark mb-0">{{ movie.name }}</h5>
+                    <span class="badge badge-warning text-dark font-weight-bold px-2 py-1"><i class="fas fa-star mr-1"></i>{{ movie.rating }}</span>
+                  </div>
+                  <p class="text-muted small mb-2"><i class="fas fa-users mr-1"></i> {{ movie.cast|default:"Cast details N/A" }}</p>
+                  <p class="card-text text-secondary small text-truncate-2 mb-3">{{ movie.description|truncatewords:15 }}</p>
+                </div>
+                <a href="{% url 'record_view_and_redirect' movie.id %}" class="btn btn-primary font-weight-bold btn-block">
+                  <i class="fas fa-ticket-alt mr-1"></i> Book Seats
+                </a>
+              </div>
+            </div>
+          </div>
+        {% empty %}
+          <div class="col-12 text-center py-5">
+            <i class="fas fa-film fa-4x text-muted mb-3"></i>
+            <h4 class="text-muted font-weight-bold">No movies found</h4>
+            <p class="text-muted">Try adjusting your search terms or filters.</p>
+          </div>
+        {% endfor %}
+      </div>
+
+      <!-- Pagination Container -->
+      <div id="paginationContainer" class="d-flex justify-content-center mt-4">
+        {% if page_obj.has_other_pages %}
+          <nav>
+            <ul class="pagination">
+              {% if page_obj.has_previous %}
+                <li class="page-item"><a class="page-link" href="#" onclick="changePage({{ page_obj.previous_page_number }}); return false;">Previous</a></li>
+              {% endif %}
+              
+              {% for p in page_obj.paginator.page_range %}
+                <li class="page-item {% if page_obj.number == p %}active{% endif %}">
+                  <a class="page-link" href="#" onclick="changePage({{ p }}); return false;">{{ p }}</a>
+                </li>
+              {% endfor %}
+
+              {% if page_obj.has_next %}
+                <li class="page-item"><a class="page-link" href="#" onclick="changePage({{ page_obj.next_page_number }}); return false;">Next</a></li>
+              {% endif %}
+            </ul>
+          </nav>
+        {% endif %}
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- Vanilla JS AJAX & Debouncing Script -->
+<script>
+  let currentPage = 1;
+  let debounceTimer = null;
+
+  const searchInput = document.getElementById('searchInput');
+  const genreFilter = document.getElementById('genreFilter');
+  const languageFilter = document.getElementById('languageFilter');
+  const theaterFilter = document.getElementById('theaterFilter');
+  const minRatingFilter = document.getElementById('minRatingFilter');
+  const ratingVal = document.getElementById('ratingVal');
+  const sortFilter = document.getElementById('sortFilter');
+  const resetFiltersBtn = document.getElementById('resetFiltersBtn');
+
+  // Debounced search
+  searchInput.addEventListener('input', () => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      currentPage = 1;
+      fetchFilteredMovies();
+    }, 300);
+  });
+
+  // Filter change listeners
+  [genreFilter, languageFilter, theaterFilter, sortFilter].forEach(el => {
+    el.addEventListener('change', () => {
+      currentPage = 1;
+      fetchFilteredMovies();
+    });
+  });
+
+  minRatingFilter.addEventListener('input', (e) => {
+    ratingVal.innerText = `${e.target.value}+`;
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      currentPage = 1;
+      fetchFilteredMovies();
+    }, 200);
+  });
+
+  resetFiltersBtn.addEventListener('click', () => {
+    searchInput.value = '';
+    genreFilter.value = '';
+    languageFilter.value = '';
+    theaterFilter.value = '';
+    minRatingFilter.value = 0;
+    ratingVal.innerText = '0+';
+    sortFilter.value = 'popularity';
+    currentPage = 1;
+    fetchFilteredMovies();
+  });
+
+  function changePage(page) {
+    currentPage = page;
+    fetchFilteredMovies();
+    window.scrollTo({ top: 400, behavior: 'smooth' });
+  }
+
+  async function fetchFilteredMovies() {
+    const params = new URLSearchParams({
+      q: searchInput.value,
+      genre: genreFilter.value,
+      language: languageFilter.value,
+      theater: theaterFilter.value,
+      min_rating: minRatingFilter.value,
+      sort: sortFilter.value,
+      page: currentPage
+    });
+
+    try {
+      const res = await fetch(`/api/discover/movies/?${params.toString()}`);
+      const data = await res.json();
+
+      if (data.success) {
+        renderMovieGrid(data.movies);
+        document.getElementById('totalCountText').innerText = `Showing ${data.total_count} movies`;
+        renderPagination(data);
+      }
+    } catch (err) {
+      console.error("Error fetching movies API:", err);
+    }
+  }
+
+  function renderMovieGrid(movies) {
+    const grid = document.getElementById('movieGrid');
+    if (!movies.length) {
+      grid.innerHTML = `
+        <div class="col-12 text-center py-5">
+          <i class="fas fa-film fa-4x text-muted mb-3"></i>
+          <h4 class="text-muted font-weight-bold">No movies match your criteria</h4>
+          <p class="text-muted">Try clearing some filters.</p>
+        </div>
+      `;
+      return;
+    }
+
+    grid.innerHTML = movies.map(m => `
+      <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card h-100 border-0 shadow-sm hover-top" style="border-radius: 12px; overflow: hidden;">
+          <img src="${m.image_url}" class="card-img-top" alt="${m.name}" style="height: 250px; object-fit: cover;">
+          <div class="card-body p-4 d-flex flex-column justify-content-between">
+            <div>
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <h5 class="font-weight-bold text-dark mb-0">${m.name}</h5>
+                <span class="badge badge-warning text-dark font-weight-bold px-2 py-1"><i class="fas fa-star mr-1"></i>${m.rating}</span>
+              </div>
+              <p class="text-muted small mb-2"><i class="fas fa-users mr-1"></i> ${m.cast || 'Cast details N/A'}</p>
+              <p class="card-text text-secondary small mb-3">${(m.description || '').substring(0, 70)}...</p>
+            </div>
+            <a href="/movies/${m.id}/view/" class="btn btn-primary font-weight-bold btn-block">
+              <i class="fas fa-ticket-alt mr-1"></i> Book Seats
+            </a>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function renderPagination(data) {
+    const container = document.getElementById('paginationContainer');
+    if (data.total_pages <= 1) {
+      container.innerHTML = '';
+      return;
+    }
+
+    let items = '';
+    if (data.has_previous) {
+      items += `<li class="page-item"><a class="page-link" href="#" onclick="changePage(${data.current_page - 1}); return false;">Previous</a></li>`;
+    }
+
+    for (let p = 1; p <= data.total_pages; p++) {
+      items += `<li class="page-item ${p === data.current_page ? 'active' : ''}">
+        <a class="page-link" href="#" onclick="changePage(${p}); return false;">${p}</a>
+      </li>`;
+    }
+
+    if (data.has_next) {
+      items += `<li class="page-item"><a class="page-link" href="#" onclick="changePage(${data.current_page + 1}); return false;">Next</a></li>`;
+    }
+
+    container.innerHTML = `<nav><ul class="pagination">${items}</ul></nav>`;
+  }
+</script>
+{% endblock %}

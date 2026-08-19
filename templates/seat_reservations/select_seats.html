@@ -1,0 +1,472 @@
+{% extends "users/basic.html" %}
+{% block content %}
+<style>
+  .screen-box {
+    background: #e0e0e0;
+    height: 30px;
+    width: 80%;
+    margin: 0 auto 30px auto;
+    border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+    text-align: center;
+    line-height: 30px;
+    font-size: 0.85rem;
+    font-weight: bold;
+    color: #555;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  }
+
+  .seat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(55px, 1fr));
+    gap: 12px;
+    max-width: 650px;
+    margin: 0 auto 30px auto;
+    padding: 20px;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+  }
+
+  .seat-btn {
+    height: 48px;
+    border-radius: 8px;
+    border: 2px solid transparent;
+    font-weight: bold;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    user-select: none;
+  }
+
+  .seat-available {
+    background-color: #28a745;
+    color: white;
+  }
+  .seat-available:hover {
+    transform: scale(1.08);
+    box-shadow: 0 4px 8px rgba(40,167,69,0.4);
+  }
+
+  .seat-reserved {
+    background-color: #ffc107;
+    color: #212529;
+    cursor: not-allowed;
+    opacity: 0.85;
+  }
+
+  .seat-booked {
+    background-color: #dc3545;
+    color: white;
+    cursor: not-allowed;
+    opacity: 0.65;
+  }
+
+  .seat-selected {
+    background-color: #007bff;
+    color: white;
+    border-color: #0056b3;
+    transform: scale(1.05);
+    box-shadow: 0 4px 10px rgba(0,123,255,0.4);
+  }
+
+  .legend-item {
+    display: inline-flex;
+    align-items: center;
+    margin-right: 20px;
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+
+  .legend-box {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    margin-right: 8px;
+  }
+
+  .timer-banner {
+    background: linear-gradient(135deg, #17a2b8 0%, #117a8b 100%);
+    color: white;
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 1.1rem;
+    font-weight: bold;
+    margin-bottom: 25px;
+  }
+
+  .timer-badge {
+    background: rgba(255,255,255,0.25);
+    padding: 4px 12px;
+    border-radius: 20px;
+    margin-left: 8px;
+    font-family: monospace;
+    font-size: 1.3rem;
+  }
+</style>
+
+<div class="container py-4">
+  <div class="card shadow-sm mb-4">
+    <div class="card-body">
+      <h2 class="font-weight-bold mb-1"><i class="fas fa-couch text-primary mr-2"></i>Select Seats</h2>
+      <p class="text-muted mb-0">
+        <strong>Movie:</strong> {{ theater.movie.name }} | 
+        <strong>Theater:</strong> {{ theater.name }} | 
+        <strong>Showtime:</strong> {{ theater.time|date:"M d, Y - h:i A" }}
+      </p>
+    </div>
+  </div>
+
+  <!-- CSRF Token Hidden Input -->
+  {% csrf_token %}
+
+  <!-- Timer & Reservation Status Banner -->
+  <div id="timerBanner" class="timer-banner d-none">
+    <i class="far fa-clock mr-2"></i>Reservation Active! Seats locked for: 
+    <span id="countdownTimer" class="timer-badge">02:00</span>
+  </div>
+
+  <div id="alertBox" class="alert d-none" role="alert"></div>
+
+  <!-- Legend Section -->
+  <div class="text-center mb-4">
+    <div class="legend-item">
+      <div class="legend-box bg-success"></div> 🟢 Available
+    </div>
+    <div class="legend-item">
+      <div class="legend-box bg-warning"></div> 🟡 Reserved (Locked)
+    </div>
+    <div class="legend-item">
+      <div class="legend-box bg-danger"></div> 🔴 Booked
+    </div>
+    <div class="legend-item">
+      <div class="legend-box bg-primary"></div> 🔵 Selected (Your Choice)
+    </div>
+  </div>
+
+  <!-- Screen indicator -->
+  <div class="screen-box">SCREEN THIS WAY</div>
+
+  <!-- Seat Grid Container -->
+  <div id="seatGrid" class="seat-grid">
+    <div class="col-12 text-center text-muted py-4">Loading seats...</div>
+  </div>
+
+  <!-- Booking Summary & Control Panel -->
+  <div class="card shadow-sm max-width-650 mx-auto" style="max-width: 650px;">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+          <h5 class="font-weight-bold mb-0">Selection Summary</h5>
+          <small id="selectedSeatsText" class="text-muted">No seats selected</small>
+        </div>
+        <div class="text-right">
+          <span class="text-muted small">Total Price (₹200/seat)</span>
+          <h4 id="totalPrice" class="font-weight-bold text-success mb-0">₹0</h4>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2 justify-content-end" style="gap: 10px;">
+        <button id="cancelBtn" class="btn btn-outline-danger font-weight-bold d-none">
+          <i class="fas fa-times mr-1"></i> Cancel Reservation
+        </button>
+        <button id="modifyBtn" class="btn btn-warning font-weight-bold text-dark d-none">
+          <i class="fas fa-edit mr-1"></i> Modify Seats
+        </button>
+        <button id="reserveBtn" class="btn btn-primary font-weight-bold px-4">
+          <i class="fas fa-lock mr-1"></i> Reserve Seats (2 Min Lock)
+        </button>
+        <button id="proceedCheckoutBtn" class="btn btn-success font-weight-bold px-4 d-none">
+          <i class="fas fa-credit-card mr-1"></i> Proceed to Checkout
+        </button>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const THEATER_ID = {{ theater.id }};
+  const TICKET_PRICE = 200;
+  const CSRF_TOKEN = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+  let currentSeatsData = [];
+  let userSelectedSeatIds = new Set();
+  let activeReservationUuid = null;
+  let timerInterval = None = null;
+  let remainingSeconds = 0;
+  let pollInterval = null;
+
+  // Initialize
+  document.addEventListener('DOMContentLoaded', () => {
+    fetchSeatStatus();
+    pollInterval = setInterval(fetchSeatStatus, 3000); // 3-second AJAX polling
+  });
+
+  function showAlert(msg, type = 'danger') {
+    const box = document.getElementById('alertBox');
+    box.className = `alert alert-${type} alert-dismissible fade show`;
+    box.innerHTML = `${msg} <button type="button" class="close" data-dismiss="alert">&times;</button>`;
+    box.classList.remove('d-none');
+  }
+
+  function clearAlert() {
+    document.getElementById('alertBox').classList.add('d-none');
+  }
+
+  // Fetch live seat status
+  async function fetchSeatStatus() {
+    try {
+      const res = await fetch(`/api/shows/${THEATER_ID}/seats/`);
+      const data = await res.json();
+      if (!data.success) return;
+
+      currentSeatsData = data.seats;
+
+      // Handle user's existing reservation if any
+      if (data.user_reservation && data.user_reservation.remaining_seconds > 0) {
+        if (!activeReservationUuid) {
+          activeReservationUuid = data.user_reservation.reservation_uuid;
+          data.user_reservation.reserved_seat_ids.forEach(id => userSelectedSeatIds.add(id));
+          startCountdown(data.user_reservation.remaining_seconds);
+        }
+      }
+
+      renderSeatGrid();
+      updateSummary();
+    } catch (err) {
+      console.error('Error fetching seats:', err);
+    }
+  }
+
+  // Render Seat Grid
+  function renderSeatGrid() {
+    const grid = document.getElementById('seatGrid');
+    grid.innerHTML = '';
+
+    currentSeatsData.forEach(seat => {
+      const btn = document.createElement('div');
+      btn.className = 'seat-btn';
+      btn.innerText = seat.seat_number;
+      btn.dataset.id = seat.id;
+
+      let currentStatus = seat.status;
+      if (userSelectedSeatIds.has(seat.id)) {
+        currentStatus = 'selected';
+      }
+
+      if (currentStatus === 'available') {
+        btn.classList.add('seat-available');
+        btn.onclick = () => toggleSeatSelection(seat.id);
+      } else if (currentStatus === 'selected') {
+        btn.classList.add('seat-selected');
+        btn.onclick = () => toggleSeatSelection(seat.id);
+      } else if (currentStatus === 'reserved') {
+        btn.classList.add('seat-reserved');
+        btn.title = 'Temporarily locked by another user';
+      } else if (currentStatus === 'booked') {
+        btn.classList.add('seat-booked');
+        btn.title = 'Permanently booked';
+      }
+
+      grid.appendChild(btn);
+    });
+  }
+
+  // Toggle seat selection
+  function toggleSeatSelection(seatId) {
+    if (userSelectedSeatIds.has(seatId)) {
+      userSelectedSeatIds.delete(seatId);
+    } else {
+      userSelectedSeatIds.add(seatId);
+    }
+    renderSeatGrid();
+    updateSummary();
+  }
+
+  // Update summary text and total price
+  function updateSummary() {
+    const selectedArray = Array.from(userSelectedSeatIds);
+    const selectedSeatsObj = currentSeatsData.filter(s => userSelectedSeatIds.has(s.id));
+    const seatNumbers = selectedSeatsObj.map(s => s.seat_number).join(', ');
+
+    const summaryText = document.getElementById('selectedSeatsText');
+    const totalPriceEl = document.getElementById('totalPrice');
+
+    if (selectedArray.length > 0) {
+      summaryText.innerHTML = `<strong>Selected Seats (${selectedArray.length}):</strong> ${seatNumbers}`;
+    } else {
+      summaryText.innerText = 'No seats selected';
+    }
+
+    totalPriceEl.innerText = `₹${selectedArray.length * TICKET_PRICE}`;
+
+    // Update buttons visibility
+    const reserveBtn = document.getElementById('reserveBtn');
+    const modifyBtn = document.getElementById('modifyBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const proceedCheckoutBtn = document.getElementById('proceedCheckoutBtn');
+
+    if (activeReservationUuid) {
+      reserveBtn.classList.add('d-none');
+      modifyBtn.classList.remove('d-none');
+      cancelBtn.classList.remove('d-none');
+      proceedCheckoutBtn.classList.remove('d-none');
+    } else {
+      reserveBtn.classList.remove('d-none');
+      modifyBtn.classList.add('d-none');
+      cancelBtn.classList.add('d-none');
+      proceedCheckoutBtn.classList.add('d-none');
+    }
+  }
+
+  document.getElementById('proceedCheckoutBtn').onclick = () => {
+    if (activeReservationUuid) {
+      window.location.href = `/checkout/${activeReservationUuid}/`;
+    }
+  };
+
+  // Countdown timer logic
+  function startCountdown(seconds) {
+    remainingSeconds = seconds;
+    const banner = document.getElementById('timerBanner');
+    const timerDisplay = document.getElementById('countdownTimer');
+
+    banner.classList.remove('d-none');
+    if (timerInterval) clearInterval(timerInterval);
+
+    timerInterval = setInterval(() => {
+      remainingSeconds--;
+      if (remainingSeconds <= 0) {
+        clearInterval(timerInterval);
+        banner.classList.add('d-none');
+        activeReservationUuid = null;
+        userSelectedSeatIds.clear();
+        showAlert('Your reservation has expired. Please select seats again.', 'danger');
+        fetchSeatStatus();
+        return;
+      }
+
+      const mins = String(Math.floor(remainingSeconds / 60)).padStart(2, '0');
+      const secs = String(remainingSeconds % 60).padStart(2, '0');
+      timerDisplay.innerText = `${mins}:${secs}`;
+    }, 1000);
+  }
+
+  // Reserve Seats API Call
+  document.getElementById('reserveBtn').onclick = async () => {
+    const seatIds = Array.from(userSelectedSeatIds);
+    if (seatIds.length === 0) {
+      showAlert('Please select at least one seat before reserving.', 'warning');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/reservations/create/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': CSRF_TOKEN
+        },
+        body: JSON.stringify({
+          theater_id: THEATER_ID,
+          seat_ids: seatIds
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        clearAlert();
+        activeReservationUuid = data.reservation_uuid;
+        startCountdown(data.remaining_seconds);
+        showAlert(data.message, 'success');
+        updateSummary();
+        fetchSeatStatus();
+      } else {
+        showAlert(data.error || 'Failed to reserve seats.', 'danger');
+        fetchSeatStatus();
+      }
+    } catch (err) {
+      showAlert('Network error while creating reservation.', 'danger');
+    }
+  };
+
+  // Modify Seats API Call
+  document.getElementById('modifyBtn').onclick = async () => {
+    if (!activeReservationUuid) return;
+    const seatIds = Array.from(userSelectedSeatIds);
+    if (seatIds.length === 0) {
+      showAlert('Selection cannot be empty.', 'warning');
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/reservations/${activeReservationUuid}/modify/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': CSRF_TOKEN
+        },
+        body: JSON.stringify({ seat_ids: seatIds })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        clearAlert();
+        startCountdown(data.remaining_seconds);
+        showAlert(data.message, 'success');
+        updateSummary();
+        fetchSeatStatus();
+      } else {
+        showAlert(data.error || 'Failed to modify reservation.', 'danger');
+      }
+    } catch (err) {
+      showAlert('Network error while modifying reservation.', 'danger');
+    }
+  };
+
+  // Cancel / Release Reservation
+  document.getElementById('cancelBtn').onclick = async () => {
+    if (!activeReservationUuid) return;
+    try {
+      const res = await fetch(`/api/reservations/${activeReservationUuid}/release/`, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': CSRF_TOKEN
+        }
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        if (timerInterval) clearInterval(timerInterval);
+        document.getElementById('timerBanner').classList.add('d-none');
+        activeReservationUuid = null;
+        userSelectedSeatIds.clear();
+        showAlert(data.message, 'info');
+        updateSummary();
+        fetchSeatStatus();
+      } else {
+        showAlert(data.error || 'Failed to release reservation.', 'danger');
+      }
+    } catch (err) {
+      showAlert('Network error while releasing reservation.', 'danger');
+    }
+  };
+
+  // Confirm & Book Form submission
+  document.getElementById('confirmBookingForm').onsubmit = (e) => {
+    const container = document.getElementById('hiddenSeatInputs');
+    container.innerHTML = '';
+    userSelectedSeatIds.forEach(id => {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'seats';
+      input.value = id;
+      container.appendChild(input);
+    });
+  };
+</script>
+{% endblock %}

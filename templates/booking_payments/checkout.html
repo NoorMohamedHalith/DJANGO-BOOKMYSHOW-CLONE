@@ -1,0 +1,119 @@
+{% extends "users/basic.html" %}
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <!-- Header Banner -->
+      <div class="card shadow border-0 mb-4">
+        <div class="card-header bg-primary text-white font-weight-bold py-3 d-flex justify-content-between align-items-center">
+          <span class="h5 mb-0"><i class="fas fa-credit-card mr-2"></i>Payment Checkout</span>
+          <span id="checkoutTimer" class="badge badge-light text-primary font-weight-bold px-3 py-2 font-monospace" style="font-size: 1.1rem;">
+            02:00
+          </span>
+        </div>
+        <div class="card-body p-4">
+          <!-- Messages -->
+          {% if messages %}
+            {% for message in messages %}
+              <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert">&times;</button>
+              </div>
+            {% endfor %}
+          {% endif %}
+
+          <div class="row mb-4">
+            <div class="col-md-8">
+              <h4 class="font-weight-bold text-dark mb-1">{{ reservation.show.movie.name }}</h4>
+              <p class="text-muted mb-2">
+                <i class="fas fa-building mr-1"></i> {{ reservation.show.name }}<br>
+                <i class="far fa-clock mr-1"></i> {{ reservation.show.time|date:"M d, Y - h:i A" }}
+              </p>
+              <p class="mb-0">
+                <strong class="text-primary">Seats Locked:</strong> {{ seat_numbers }}
+              </p>
+            </div>
+            <div class="col-md-4 text-md-right mt-3 mt-md-0">
+              <span class="text-muted small">Total Payable</span>
+              <h2 class="font-weight-bold text-success mb-0">₹{{ payment.amount }}</h2>
+              <small class="text-muted">(₹200 per seat)</small>
+            </div>
+          </div>
+
+          <hr>
+
+          <!-- Payment Options -->
+          <h5 class="font-weight-bold mb-3"><i class="fas fa-wallet text-info mr-2"></i>Select Payment Method</h5>
+
+          <div class="card border-success mb-4 bg-light">
+            <div class="card-body">
+              <div class="custom-control custom-radio mb-3">
+                <input type="radio" id="methodMock" name="payment_method" class="custom-control-input" checked>
+                <label class="custom-control-label font-weight-bold" for="methodMock">
+                  Instant Mock Payment (Simulated Instant Approval)
+                </label>
+                <p class="text-muted small mb-0 ml-4">
+                  Simulates payment gateway approval, confirms booking instantly, generates QR code and ReportLab PDF ticket.
+                </p>
+              </div>
+
+              <div class="custom-control custom-radio mb-3 opacity-50" style="opacity: 0.6;">
+                <input type="radio" id="methodRazorpay" name="payment_method" class="custom-control-input" disabled>
+                <label class="custom-control-label font-weight-bold text-muted" for="methodRazorpay">
+                  Razorpay (UPI / NetBanking / Cards) - Sandbox Mode
+                </label>
+              </div>
+
+              <div class="custom-control custom-radio opacity-50" style="opacity: 0.6;">
+                <input type="radio" id="methodStripe" name="payment_method" class="custom-control-input" disabled>
+                <label class="custom-control-label font-weight-bold text-muted" for="methodStripe">
+                  Stripe Credit/Debit Cards - Sandbox Mode
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Process Payment Form -->
+          <form method="POST" action="{% url 'process_mock_payment_view' reservation.reservation_uuid %}">
+            {% csrf_token %}
+            <button type="submit" id="payBtn" class="btn btn-success btn-lg btn-block font-weight-bold shadow-sm">
+              <i class="fas fa-lock mr-2"></i> Pay ₹{{ payment.amount }} & Confirm Booking
+            </button>
+          </form>
+
+          <div class="text-center mt-3">
+            <a href="{% url 'select_seats_view' reservation.show.id %}" class="text-muted small">
+              <i class="fas fa-arrow-left mr-1"></i> Back to Seat Selection
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div class="text-center text-muted small">
+        <i class="fas fa-shield-alt text-success mr-1"></i> 256-Bit SSL Encrypted & Secure Checkout
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let secondsLeft = {{ remaining_seconds }};
+  const timerDisplay = document.getElementById('checkoutTimer');
+
+  if (secondsLeft > 0) {
+    const timerInterval = setInterval(() => {
+      secondsLeft--;
+      if (secondsLeft <= 0) {
+        clearInterval(timerInterval);
+        timerDisplay.innerText = '00:00';
+        alert('Your seat reservation has expired. Please select seats again.');
+        window.location.href = "{% url 'select_seats_view' reservation.show.id %}";
+        return;
+      }
+      const mins = String(Math.floor(secondsLeft / 60)).padStart(2, '0');
+      const secs = String(secondsLeft % 60).padStart(2, '0');
+      timerDisplay.innerText = `${mins}:${secs}`;
+    }, 1000);
+  }
+</script>
+{% endblock %}
