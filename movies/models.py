@@ -14,17 +14,25 @@ class Movie(models.Model):
 
     @property
     def poster_url(self):
+        posters = {
+            'Avengers: Endgame': 'https://image.tmdb.org/t/p/w500/or06FN3Dka5tukK1e9sl16pB3iy.jpg',
+            'Interstellar': 'https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg',
+            'Oppenheimer': 'https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGvFwgu2Wj3.jpg',
+            'The Dark Knight': 'https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg',
+            'Avatar: The Way of Water': 'https://image.tmdb.org/t/p/w500/t6HIwfgP19o2udqFj57D0t1tYg.jpg'
+        }
         if self.image:
             img_str = str(self.image)
             if img_str.startswith('http://') or img_str.startswith('https://'):
                 return img_str
             if img_str.startswith('/'):
                 return img_str
-            try:
-                return self.image.url
-            except Exception:
-                return f"/media/{img_str}"
-        return "/media/movies/avengers_endgame_real.jpg"
+        if self.name in posters:
+            return posters[self.name]
+        for key, url in posters.items():
+            if key.lower() in self.name.lower():
+                return url
+        return "https://image.tmdb.org/t/p/w500/or06FN3Dka5tukK1e9sl16pB3iy.jpg"
 
 class Theater(models.Model):
     name = models.CharField(max_length=255)
